@@ -9,4 +9,4 @@
 - CUDA 10.2
 
 ## Setup
-1. Follow [RenderMan](https://github.com/seawee1/RenderMan) setup and compile librenderman.so. You can test if everything is working with test.ipynb (adjust librenderman.so and VST path beforehand).
+1. Follow [RenderMan](https://github.com/seawee1/RenderMan) setup and compile librenderman.so. You can test if everything is working with test.ipynb (adjust librenderman.so path and VST path beforehand).
