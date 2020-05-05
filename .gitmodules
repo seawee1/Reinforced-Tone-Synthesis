@@ -1,0 +1,3 @@
+[submodule "RenderMan"]
+	path = RenderMan
+	url = https://github.com/seawee1/RenderMan.git
