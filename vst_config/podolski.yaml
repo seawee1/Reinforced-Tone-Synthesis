@@ -1,5 +1,6 @@
 vstPath: "/home/seawee1/.vst/u-he/Podolski.64.so"
 
+# Init values for parameters when loading vst
 init:
     0: 0.5 # main: Output
     1: 1.0 # main: Active #LFOG
@@ -80,3 +81,86 @@ init:
     76: 0.0 # LFO1: DepthMod Dpt1
     77: 0.0 # LFO1: Rate
     78: 0.0 # LFO1: FreqMod Dpt
+
+# Parameters to randomize
+# parameter: [interval_start, interval_end]
+rnd:
+    #0: 0.5 # main: Output
+    #1: 1.0 # main: Active #LFOG
+    #2: 1.0 # main: Active #Chrs
+    #3: 1.0 # main: Active #Dly1
+    #4: 0.192308 # LFOG: Sync
+    #5: 0.0 # LFOG: Phase
+    #6: 1.0 # VCC: Active #LFO1
+    #7: 0.5 # VCC: Voices
+    #8: 1.0 # VCC: Voice Stack
+    #9: 0.0 # VCC: Mode
+    #10: 0.0 # VCC: Glide
+    #11: 0.5 # VCC: Arp Step Mod1
+    #12: 0.5 # VCC: Arp Step Mod2
+    #13: 0.5 # VCC: Arp Step Mod3
+    #14: 0.5 # VCC: Arp Step Mod4
+    #15: 0.5 # VCC: Arp Step Mod5
+    #16: 0.5 # VCC: Arp Step Mod6
+    #17: 0.5 # VCC: Arp Step Mod7
+    #18: 0.5 # VCC: Arp Step Mod8
+    #19: 0.5 # VCC: Arp Step Mod9
+    #20: 0.5 # VCC: Arp Step Mod10
+    #21: 0.5 # VCC: Arp Step Mod11
+    #22: 0.5 # VCC: Arp Step Mod12
+    #23: 0.5 # VCC: Arp Step Mod13
+    #24: 0.5 # VCC: Arp Step Mod14
+    #25: 0.5 # VCC: Arp Step Mod15
+    #26: 0.5 # VCC: Arp Step Mod16
+    27: [0.0, 0.6] # ENV1: Attack
+    28: [0.0, 1.0] # ENV1: Decay
+    29: [0.0, 1.0] # ENV1: Sustain
+    #30: 0.5 # ENV1: Fall - Rise
+    31: [0.0, 0.8] # ENV1: Release
+    #32: 0.25 # ENV1: Velocity
+    #33: 0.192308 # LFO1: Sync
+    #34: 0.0 # LFO1: Delay
+    #35: 0.5 # OSC1: Tune
+    #36: 0.0 # OSC1: TuneModSrc
+    #37: 0.5 # OSC1: TuneModDepth
+    #38: 0.5 # OSC1: Phase
+    #39: 0.0 # OSC1: PhaseModSrc
+    #40: 0.5 # OSC1: PhaseModDepth
+    #41: 0.0 # OSC1: Inverse Volume
+    #42: 0.5 # OSC1: WaveWarp
+    #43: 0.0 # OSC1: WarpModSrc
+    #44: 0.5 # OSC1: WarpModDepth
+    #45: 0.0 # OSC1: Vibrato
+    #46: 0.0 # VCF0: Type
+    47: [0.2, 1.0] # VCF0: Cutoff
+    48: [0.0, 0.8] # VCF0: Resonance
+    #49: 0.0 # VCF0: Drive
+    #50: 0.5 # VCF0: CutoffMod 1
+    #51: 0.0 # VCF0: Modsource1
+    #52: 0.5 # VCF0: CutoffMod 2
+    #53: 0.0 # VCF0: Modsource2
+    #54: 0.75 # VCF0: KeyFollow
+    #55: 0.5 # VCF0: AutoFM
+    #56: 0.0 # VCF0: Click
+    #57: 0.5 # VCA1: Pan
+    #58: 0.3 # VCA1: Volume
+    #59: 0.5 # VCA1: ModDepth
+    #60: 0.2 # Chrs: Center
+    #61: 0.5 # Chrs: Speed
+    #62: 0.5 # Chrs: Depth
+    #63: 0.5 # Chrs: Feedback
+    #64: 0.0 # Chrs: Mix
+    #65: 0.25 # Dly1: Sync Left
+    #66: 0.25 # Dly1: Sync Right
+    #67: 0.0 # Dly1: Feedback
+    #68: 0.0 # Dly1: Crossfeed
+    #69: 0.0 # Dly1: Mix
+    #70: 0.142857 # LFOG: Waveform
+    #71: 0.0 # LFOG: Polarity
+    #72: 0.0 # LFO1: Restart
+    #73: 0.0 # LFO1: Waveform
+    #74: 0.0 # LFO1: Phase
+    #75: 0.0 # LFO1: Polarity
+    #76: 0.0 # LFO1: DepthMod Dpt1
+    #77: 0.0 # LFO1: Rate
+    #78: 0.0 # LFO1: FreqMod Dpt
