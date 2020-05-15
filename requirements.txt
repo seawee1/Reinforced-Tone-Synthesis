@@ -72,6 +72,7 @@ python=3.7.7=hcff3b4d_5
 python-dateutil=2.8.1=py_0
 python_abi=3.7=1_cp37m
 pytz=2020.1=pypi_0
+pyyaml=5.3.1=py37h7b6447c_0
 pyzmq=18.1.1=py37he6710b0_0
 readline=8.0=h7b6447c_0
 scipy=1.4.1=py37ha3d9a3c_3
@@ -93,6 +94,7 @@ werkzeug=1.0.1=pyh9f0ad1d_0
 wheel=0.34.2=py37_0
 wrapt=1.12.1=py37h8f50634_1
 xz=5.2.5=h7b6447c_0
+yaml=0.1.7=had09818_2
 zeromq=4.3.1=he6710b0_3
 zipp=3.1.0=py_0
 zlib=1.2.11=h7b6447c_3
