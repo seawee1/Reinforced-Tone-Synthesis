@@ -20,8 +20,8 @@ class VSTEnv(gym.Env):
 
         # Number of VST knobs to operate
         self.num_knobs = len(vst_config['rnd'])
-        # Mapping from knob index to VST param
-        #self.obs_param_dict = dict(enumerate(vst_config['rnd'].keys()))
+        # Mapping from action index (0, 1, ..., num_knobs) to VST parameter
+        self.action_to_param_dict = dict(enumerate(vst_config['rnd'].keys()))
 
         # For now, operate all knobs at once
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_knobs,))
@@ -34,7 +34,8 @@ class VSTEnv(gym.Env):
         self.generator = rm.PatchGenerator(engine)
         # Initialize and randomize VST params
         self.init_engine() # Load init params
-        self.state = self.randomize_engine() # Randomize params and save the state
+        self.state = {}
+        self.randomize_engine() # Randomize params and save the state
 
     # Load init params from config_vst
     def init_engine(self):
@@ -43,31 +44,35 @@ class VSTEnv(gym.Env):
 
     # Randomize specific set of params as defined in config_vst
     def randomize_engine(self):
-        state = {}
         for param, value in self.config_vst['rnd'].items():
-            state[param] = random.uniform(value[0], value[1])
+            self.state[param] = random.uniform(value[0], value[1])
             self.engine.override_plugin_parameter(param, state[param])
-        return state
 
     # Set params (the ones defined to be randomized) to specific values
-    def set_engine(self, state):
-        for param, value in state.items():
-            self.engine.override_plugin_parameter(param, state[param])
+    def set_engine(self):
+        for param, value in self.state.items():
+            self.engine.override_plugin_parameter(param, value)
 
     # Render an audio patch
     def render_patch(self):
         self.engine.render_patch(self.config['midiNote'], self.config['midiVelocity'], self.config['noteLength'], self.config['renderLength'], True)
-        audio = engine.get_audio_frames()
-        #mfccs = engine.get_mfcc_frames()
-        return np.array(audio) #, mfccs
+        self.audio = np.array(self.engine.get_audio_frames())
 
     # Compute mfccs of audio patch
-    def compute_mfccs(self, audio):
-        mfccs = librosa.feature.mfcc(y=audio, sr=config['sampleRate'], n_mfcc = 13)
-        return mfccs
+    def compute_mfccs(self):
+        self.mfccs = librosa.feature.mfcc(y=self.audio, sr=self.config['sampleRate'], n_mfcc = 13)
 
     def step(self, action):
-        # TODO
+        # Apply knob adjustments, clip to [0, 1.0]
+        clip = lambda x, l, u: max(l, min(u, x))
+        for i, x in enumerate(action):
+            self.state[self.action_to_param_dict[i]] = clip(self.state[self.action_to_param_dict[i]] + x, 0, 1.0)
+
+        # Render audio, compute features
+        self.render_patch()
+        self.compute_mfccs()
+
+        # TODO: reward
         return observation, reward, done, info
 
     def reset(self):
@@ -88,7 +93,6 @@ def load_configs():
         except yaml.YAMLError as exc:
             print(exc)
     return config, config_vst
-
 
 
 config, config_vst = load_configs()
