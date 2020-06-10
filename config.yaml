@@ -5,6 +5,7 @@ vst: "podolski"
 sampleRate: 44100
 bufferSize: 512
 fftSize: 512
+mfccSize: 13
 
 # Midi
 midiNote: 72
