@@ -5,6 +5,7 @@ import numpy as np
 import random
 import librosa
 import librenderman as rm
+from scipy.io.wavfile import write
 
 class VSTEnv(gym.Env):
     def __init__(self, config, vst_config):
@@ -19,6 +20,7 @@ class VSTEnv(gym.Env):
         self.num_audio_samples = self.num_audio_samples - (self.num_audio_samples % config['fftSize']) # Keep audio samples divisible by fftSize
         self.num_freq = int(1+(config['fftSize']/2.0))
         self.num_windows = int((self.num_audio_samples / config['fftSize'] - 1.0) * (config['fftSize'] / config['hopSize']) + 1.0)
+        print(self.num_freq, self.num_windows)
 
         # Mapping from action index (0, 1, ..., num_knobs) to VST parameter
         #self.action_to_param_dict = dict(enumerate(vst_config['rnd'].keys()))
@@ -31,7 +33,8 @@ class VSTEnv(gym.Env):
         #    Discrete(self.num_knobs),
         #    Box(low=-1.0, high=1.0, shape=(1,))
         #))
-        self.action_space = Box(low=0.0, high=self.num_knobs*2.0, shape=(1,))
+        #self.action_space = Box(low=0.0, high=self.num_knobs*2.0, shape=(1,))
+        self.action_space = Discrete(self.num_knobs*4)
 
         # observation = state of VST knobs + rendered audio patch
         #self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_knobs + self.num_audio_samples,))
@@ -56,6 +59,7 @@ class VSTEnv(gym.Env):
         self.cur_metric = 0.0
         self.old_metric = 0.0
 
+        self.cur_step = 0
 
     # Init VST engine params from 'self.vst_config'
     def init_engine(self):
@@ -67,8 +71,11 @@ class VSTEnv(gym.Env):
     # Randomize specific set of params as defined in 'self.vst_config'
     def randomize_engine(self):
         for param, value in self.vst_config['rnd'].items():
-            self.knob_state[param] = random.uniform(value[0], value[1])
+            rnd = random.uniform(value[0], value[1])
+            rnd = rnd - rnd % 0.05
+            self.knob_state[param] = rnd
         self.set_engine()
+        self.target_knobs = self.knob_state.copy()
 
     # Set params (the ones defined to be randomized) to specific values specified in 'self.state'
     def set_engine(self):
@@ -83,7 +90,7 @@ class VSTEnv(gym.Env):
 
     # Compute stft of audio patch, safe to 'self.cur_stft'
     def compute_stft(self):
-        self.cur_stft = np.abs(librosa.stft(y=self.cur_audio, center=False))
+        self.cur_stft = np.abs(librosa.stft(y=self.cur_audio, hop_length=self.config['hopSize'], center=False))
         self.cur_stft = (self.cur_stft - np.min(self.cur_stft)) / np.max(self.cur_stft) # Normalize absolute amplitudes to value range [0,1]
 
     #def compute_similarity(self):
@@ -97,16 +104,39 @@ class VSTEnv(gym.Env):
         self.frobenius_matrix = np.square(np.abs(self.target_stft - self.cur_stft))
         self.cur_metric = float(np.sqrt(np.sum(self.frobenius_matrix)))
 
-        self.reward = float(self.old_metric - self.cur_metric)
-        if(self.reward==0.0):
+        metric_dif = float(self.old_metric - self.cur_metric)
+
+        if metric_dif < 0.0:
             self.reward = -1.0
-        print(self.cur_metric, self.reward)
-        self.done = bool(np.all(self.frobenius_matrix < self.config['epsilon']**2))
+        elif metric_dif > 0.0:
+            self.reward = 1.0
+        else:
+            self.reward = -0.5
+
+        if self.cur_step % 100 == 0:
+            z = set(self.knob_state) & set(self.target_knobs)
+            asd = ''
+            for i in z:
+                asd = asd + str(i) + ": (" + '{:0.2f}'.format(self.knob_state[i]) + " / " + '{:0.2f}'.format(self.target_knobs[i]) + "), "
+            print(self.cur_step, asd, self.cur_metric, self.reward)
+        #self.done = bool(np.all(self.frobenius_matrix < self.config['epsilon']**2))
+        self.done = self.cur_metric < 1.0
+        if self.done:
+            print('DONE')
+            z = set(self.knob_state) & set(self.target_knobs)
+            asd = ''
+            for i in z:
+                asd = asd + str(i) + ": (" + '{:0.2f}'.format(self.knob_state[i]) + " / " + '{:0.2f}'.format(self.target_knobs[i]) + "), "
+            print(self.cur_step, asd, self.cur_metric, self.reward)
 
     def step(self, action):
+        #self.cur_action = action
+        #knob = int(action[0] // 2.0)
+        #amount = (action[0] % 2.0) - 1.0
         self.cur_action = action
-        knob = int(action[0] // 2.0)
-        amount = (action[0] % 2.0) - 1.0
+        knob = action // 4
+        amount = 0.5 if action % 2 == 0 else 0.05
+        amount = -amount if action % 4 < 2 else amount
 
         # Apply knob adjustments, clip VST param to [0, 1.0]
         clip = lambda x, l, u: max(l, min(u, x))
@@ -117,11 +147,17 @@ class VSTEnv(gym.Env):
         # Render audio, compute stft and reward
         self.set_engine()
         self.render_patch()
+        self.render_patch()
         self.compute_stft()
         self.compute_reward()
 
         observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
         info = {}
+
+        if self.cur_step % 100 == 0:
+            write(str(self.cur_step) + '.wav', self.config['sampleRate'], self.cur_audio)
+        self.cur_step += 1
+
         return observation, self.reward, self.done, info
 
     def reset(self):
@@ -129,10 +165,12 @@ class VSTEnv(gym.Env):
         self.init_engine() # Init engine params
         self.randomize_engine() # Randomize engine params
         self.render_patch() # Render audio
+        self.render_patch()
         self.target_audio = np.copy(self.cur_audio)
+
         self.compute_stft() # Compute stft
         self.target_stft = np.copy(self.cur_stft)
-
+        write('target.wav', self.config['sampleRate'], self.target_audio)
         # Reinitialize VST engine to start state
         self.init_engine()
         self.render_patch()
@@ -140,6 +178,8 @@ class VSTEnv(gym.Env):
 
         # Compute similarity between target and start
         self.compute_reward()
+
+        self.cur_step = 0
 
         observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
         return observation
