@@ -2,13 +2,18 @@ libPath: "./RenderMan/Builds/LinuxMakefile/build/librenderman.so"
 vst: "podolski"
 
 # Audio
-sampleRate: 44100
+sampleRate: 22050
 bufferSize: 512
-fftSize: 512
-mfccSize: 13
+fftSize: 2048
+hopSize: 512
+# mfccSize: 13
 
 # Midi
 midiNote: 72
 midiVelocity: 127
 noteLength: 1.0
 renderLength: 5.0
+
+# Alg
+epsilon: 0.1
+simple: True

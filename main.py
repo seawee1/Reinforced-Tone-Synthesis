@@ -35,6 +35,6 @@ symlink_librenderman(config)
 
 # Create name
 env = VSTEnv(config, config_vst)
-#model = A2C(MlpPolicy, env, verbose=1)
-#model.learn(total_timesteps=25000)
-check_env(env, warn=True)
+model = A2C(MlpPolicy, env, verbose=1)
+model.learn(total_timesteps=25000)
+#check_env(env, warn=True)
