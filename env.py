@@ -43,7 +43,8 @@ class VSTEnv(gym.Env):
         #    spaces.Box(low=0.0, high=1.0, shape=(self.num_freq, self.num_windows)),
         #    spaces.Box(low=0.0, high=1.0, shape=(self.num_freq, self.num_windows))
         #))
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(self.num_knobs + 2*self.num_freq*self.num_windows,))
+        #self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(self.num_knobs + 2*self.num_freq*self.num_windows,))
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(3, self.num_freq,self.num_windows,))
 
         # Create VST engine and generator
         self.engine = rm.RenderEngine(config['sampleRate'], config['bufferSize'], config['fftSize'])
@@ -72,7 +73,7 @@ class VSTEnv(gym.Env):
     def randomize_engine(self):
         for param, value in self.vst_config['rnd'].items():
             rnd = random.uniform(value[0], value[1])
-            rnd = rnd - rnd % 0.05
+            rnd = rnd - rnd % 0.01
             self.knob_state[param] = rnd
         self.set_engine()
         self.target_knobs = self.knob_state.copy()
@@ -85,7 +86,7 @@ class VSTEnv(gym.Env):
     # Render an audio patch, safe to 'self.cur_audio'
     def render_patch(self):
         self.set_engine()
-        self.engine.render_patch(self.config['midiNote'], self.config['midiVelocity'], self.config['noteLength'], self.config['renderLength'], True)
+        self.engine.render_patch(self.config['midiNote'], self.config['midiVelocity'], self.config['noteLength'], self.config['renderLength'])
         self.cur_audio = np.array(self.engine.get_audio_frames())[:self.num_audio_samples]
 
     # Compute stft of audio patch, safe to 'self.cur_stft'
@@ -120,7 +121,7 @@ class VSTEnv(gym.Env):
                 asd = asd + str(i) + ": (" + '{:0.2f}'.format(self.knob_state[i]) + " / " + '{:0.2f}'.format(self.target_knobs[i]) + "), "
             print(self.cur_step, asd, self.cur_metric, self.reward)
         #self.done = bool(np.all(self.frobenius_matrix < self.config['epsilon']**2))
-        self.done = self.cur_metric < 1.0
+        self.done = self.cur_metric < 0.1
         if self.done:
             print('DONE')
             z = set(self.knob_state) & set(self.target_knobs)
@@ -135,7 +136,7 @@ class VSTEnv(gym.Env):
         #amount = (action[0] % 2.0) - 1.0
         self.cur_action = action
         knob = action // 4
-        amount = 0.5 if action % 2 == 0 else 0.05
+        amount = 0.1 if action % 2 == 0 else 0.05
         amount = -amount if action % 4 < 2 else amount
 
         # Apply knob adjustments, clip VST param to [0, 1.0]
@@ -151,7 +152,8 @@ class VSTEnv(gym.Env):
         self.compute_stft()
         self.compute_reward()
 
-        observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
+        #observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
+        observation = np.stack((self.target_stft, self.cur_stft, np.zeros((self.num_freq, self.num_windows))))
         info = {}
 
         if self.cur_step % 100 == 0:
@@ -181,7 +183,8 @@ class VSTEnv(gym.Env):
 
         self.cur_step = 0
 
-        observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
+        #observation = np.concatenate((np.array(list(self.knob_state.values())).flatten(), self.target_stft.flatten(), self.cur_stft.flatten()))
+        observation = np.stack((self.target_stft, self.cur_stft, np.zeros((self.num_freq, self.num_windows))))
         return observation
 
     def render(self, mode='console'):
