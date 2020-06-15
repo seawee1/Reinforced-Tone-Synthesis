@@ -18,13 +18,16 @@ class VSTEnv(gym.Env):
         self.num_audio_samples = int(config['sampleRate'] * config['renderLength']) # Keep audio samples divisible by fftSize
         self.num_audio_samples = self.num_audio_samples - (self.num_audio_samples % config['fftSize'])
         self.num_freq = int(1+(config['fftSize']/2.0))
-        self.num_windows = int((self.num_audio_samples / config['fftSize'] - 1.0) * (config['fftSize'] / config['hopSize']) + 1.0)
+        self.num_mfcc = 20
+        #self.num_windows = int((self.num_audio_samples / config['fftSize'] - 1.0) * (config['fftSize'] / config['hopSize']) + 1.0)
+        self.num_windows = int((self.num_audio_samples / config['fftSize']) * (config['fftSize'] / config['hopSize']) + 1.0)
 
         # Mapping from action index (0, 1, ..., num_knobs) to VST parameter
         self.action_to_param = list(vst_config['rnd'].keys())
 
         self.action_space = MultiDiscrete([self.num_knobs, 4])
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_freq, self.num_windows,))
+        #self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_freq, self.num_windows,))
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_mfcc, self.num_windows))
         #self.observation_space = spaces.Box(low=0, high=255, shape=(self.num_freq, self.num_windows, 1))
 
         # Create VST engine and generator
@@ -42,7 +45,7 @@ class VSTEnv(gym.Env):
         return knob_state
 
     # Randomize specific set of params as defined in 'self.vst_config'
-    def randomize_knobs(self, knob_state):
+    def randomize_knobs(self):
         knob_state = {}
         for param, value in self.vst_config['rnd'].items():
             rnd = random.uniform(value[0], value[1])
@@ -60,21 +63,39 @@ class VSTEnv(gym.Env):
 
     # Compute stft of audio patch, safe to 'self.cur_stft'
     def compute_stft(self, audio):
+        return self.compute_mfcc(audio)
         stft = np.abs(librosa.stft(y=audio, hop_length=self.config['hopSize'], center=False))
         stft = (stft - np.min(stft)) / np.max(stft) # Normalize absolute amplitudes to value range [0,1]
         return stft
+    def compute_mfcc(self, audio):
+        mfcc = librosa.feature.mfcc(y=audio, sr=self.config['sampleRate'])
+        '''
+        from PIL import Image
+        import time
+        mat = np.copy(mfcc)
+        mat = mat + np.abs(np.min(mat))
+        mat = mat / np.max(mat)
+        img = Image.fromarray(np.uint8(mat*255), 'L')
+        img.show()
+        img.save('out.jpg')
+        exit()
+        '''
+        #mfcc_mvn = (mfcc - np.expand_dims(np.mean(mfcc, axis=1), axis=1))/np.expand_dims(np.std(mfcc, axis=1), axis=1)
+        #mfcc_msn = (mfcc - np.expand_dims(np.mean(mfcc, axis=1), axis=1))
+        #mfcc_msn /= np.max(np.abs(mfcc_msn))
+        mfcc_sn = mfcc/np.max(np.abs(mfcc))
+        return mfcc_msn
 
     def compute_reward(self):
         # similarity := 1/(1+dist)
-        # dist is scaled to range [0,4]
         #similarity = lambda x, y: 1/(1+(4*np.linalg.norm(self.target_stft - self.cur_stft)/(4.0*self.num_freq*self.num_windows)))
-        similarity = lambda x, y: 1/(1+np.linalg.norm(self.goal_stft - self.stft))
+        self.stft_dif = self.goal_stft - self.stft
 
         if not hasattr(self, 'similarity'):
-            self.similarity = similarity(self.goal_stft, self.stft)
+            self.similarity = 1/(1+np.linalg.norm(self.stft_dif))
         else:
             self.old_similarity = self.similarity
-            self.similarity = similarity(self.goal_stft, self.stft)
+            self.similarity = 1/(1+np.linalg.norm(self.stft_dif))
             self.reward = float(self.similarity - self.old_similarity)
             self.done = self.similarity > 0.95
 
@@ -119,8 +140,8 @@ class VSTEnv(gym.Env):
         self.iter = 0
 
         # Create goal
-        self.goal_knob_state = self.init_engine() # Init engine params
-        self.randomize_knobs(self.goal_knob_state) # Randomize engine params
+        _ = self.init_engine() # Init engine params
+        self.goal_knob_state = self.randomize_knobs() # Randomize engine params
         self.goal_audio = self.render_audio(self.goal_knob_state) # Render audio
         self.goal_stft = self.compute_stft(self.goal_audio) # Compute stft
         #write('target.wav', self.config['sampleRate'], self.target_audio)
@@ -129,6 +150,12 @@ class VSTEnv(gym.Env):
         self.knob_state = self.init_engine()
         self.audio = self.render_audio(self.knob_state)
         self.stft = self.compute_stft(self.audio)
+        #self.mfcc = self.compute_mfcc(self.audio)
+        #print(self.mfcc)
+        #print(self.mfcc.shape)
+        #print(np.min(self.mfcc))
+        #print(np.max(self.mfcc))
+        #print(np.sum(self.mfcc))
 
         # Compute similarity between target and start
         self.compute_reward()

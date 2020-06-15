@@ -17,18 +17,45 @@ from stable_baselines.common.evaluation import evaluate_policy
 from stable_baselines.common.cmd_util import make_vec_env
 
 class TensorboardCallback(BaseCallback):
-    def __init__(self, env, verbose=0):
-        self.env = env
-        self.first = True
+    def __init__(self, verbose=0):
+        self.is_tb_set = False
         super(TensorboardCallback, self).__init__(verbose)
 
+    def summary_images(self, tag, images):
+        from io import BytesIO ## for Python 3
+        import matplotlib.pyplot as plt
+        from matplotlib.pyplot import cm, imsave
+
+        im_summaries = []
+        for nr, img in enumerate(images):
+        # Write the image to a string
+            s = BytesIO()
+            imsave(s, img, format='png', cmap=cm.coolwarm)
+
+            # Create an Image object
+            img_sum = tf.Summary.Image(encoded_image_string=s.getvalue(), height=img.shape[0], width=img.shape[1])
+            # Create a Summary value
+            im_summaries.append(tf.Summary.Value(tag='%s/%d' % (tag, nr), image=img_sum))
+
+        # Create and write Summary
+        summary = tf.Summary(value=im_summaries)
+        return summary
+
     def _on_step(self):
-        if self.first:
-            goal_stft = tf.expand_dims(tf.convert_to_tensor(self.env.goal_stft), 0)
-            summary = tf.compat.v1.summary.image('goal_stft', goal_stft)
-            #self.locals['writer'].add_summary(summary, self.num_timesteps)
-            #print("wow")
-            self.first = False
+        if not self.is_tb_set:
+            #print(type(self.model.get_env().get_attr('goal_stft')[0]))
+            #print((self.model.get_env().get_attr('goal_stft'))[0].shape)
+            with self.model.graph.as_default():
+
+                self.model.summary = tf.summary.merge_all()
+            self.is_tb_set = True
+
+        #stft_to_tensor = lambda attr_name: tf.expand_dims(tf.convert_to_tensor(self.model.get_env().get_attr(attr_name)[0]), 2)
+        #img = tf.stack([stft_to_tensor('goal_stft'), stft_to_tensor('stft'), stft_to_tensor('stft_dif')])
+        images = [self.model.get_env().get_attr('goal_stft')[0], self.model.get_env().get_attr('stft')[0], self.model.get_env().get_attr('stft_dif')[0]]
+        summary = self.summary_images('stft', images)
+
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
         return True
 
 def load_configs():
