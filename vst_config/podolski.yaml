@@ -133,7 +133,7 @@ rnd:
     #45: 0.0 # OSC1: Vibrato
     #46: 0.0 # VCF0: Type
     47: [0.2, 1.0] # VCF0: Cutoff
-    48: [0.0, 0.8] # VCF0: Resonance
+    #48: [0.0, 0.8] # VCF0: Resonance
     #49: 0.0 # VCF0: Drive
     #50: 0.5 # VCF0: CutoffMod 1
     #51: 0.0 # VCF0: Modsource1

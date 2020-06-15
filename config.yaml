@@ -4,9 +4,9 @@ vst: "podolski"
 # Audio
 sampleRate: 22050
 bufferSize: 512
-fftSize: 512
+fftSize: 2048
 
-hopSize: 128
+hopSize: 512
 # mfccSize: 13
 
 # Midi
